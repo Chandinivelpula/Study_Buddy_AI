@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StudyBuddy AI – Handwritten Note Digitizer with AI Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #111118;
+      --bg-card: #16161f;
+      --bg-card-hover: #1c1c28;
+      --border: rgba(255,255,255,0.07);
+      --border-accent: rgba(120,100,255,0.35);
+      --purple: #7c6aff;
+      --purple-light: #a89aff;
+      --purple-dim: rgba(124,106,255,0.12);
+      --teal: #2dd4bf;
+      --teal-dim: rgba(45,212,191,0.1);
+      --text-primary: #f0eeff;
+      --text-secondary: #9490b0;
+      --text-muted: #5a5780;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+      --radius-xl: 24px;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.65;
+      overflow-x: hidden;
+    }
+    h1, h2, h3, h4 { font-family: 'Space Grotesk', sans-serif; font-weight: 600; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+    .section { padding: 100px 0; }
+    .section-label {
+      font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--purple-light); margin-bottom: 14px;
+    }
+    .section-title { font-size: clamp(28px, 4vw, 42px); color: var(--text-primary); margin-bottom: 16px; line-height: 1.2; }
+    .section-subtitle { font-size: 17px; color: var(--text-secondary); max-width: 560px; line-height: 1.7; }
+    .section-header { margin-bottom: 64px; }
+
+    .fade-in { opacity: 0; transform: translateY(24px); transition: opacity 0.65s ease, transform 0.65s ease; }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+    /* ===== NAVBAR ===== */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 18px 0;
+      background: rgba(10,10,15,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      max-width: 1100px; margin: 0 auto; padding: 0 24px;
+    }
+    .nav-logo {
+      font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700;
+      color: var(--text-primary); text-decoration: none;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .nav-logo span {
+      width: 28px; height: 28px; background: var(--purple); border-radius: 7px;
+      display: flex; align-items: center; justify-content: center; font-size: 14px;
+    }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a { font-size: 14px; color: var(--text-secondary); text-decoration: none; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--text-primary); }
+    .nav-actions { display: flex; align-items: center; gap: 10px; }
+
+    .btn-nav {
+      font-size: 13px; font-weight: 600; padding: 8px 20px;
+      border-radius: var(--radius-sm); background: var(--purple);
+      color: #fff; border: none; cursor: pointer; text-decoration: none;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .btn-nav:hover { background: var(--purple-light); transform: translateY(-1px); }
+    .btn-nav-ghost {
+      font-size: 13px; font-weight: 500; padding: 8px 18px;
+      border-radius: var(--radius-sm); background: transparent;
+      color: var(--text-secondary); border: 1px solid var(--border);
+      cursor: pointer; text-decoration: none;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-nav-ghost:hover { border-color: var(--purple); color: var(--text-primary); }
+
+    /* User avatar in nav */
+    .nav-user {
+      display: none; align-items: center; gap: 10px;
+    }
+    .nav-user.visible { display: flex; }
+    .nav-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--purple-dim); border: 1px solid var(--border-accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: var(--purple-light);
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .nav-username { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+    .btn-logout {
+      font-size: 12px; font-weight: 500; padding: 6px 14px;
+      border-radius: var(--radius-sm); background: transparent;
+      color: var(--text-muted); border: 1px solid var(--border);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-logout:hover { border-color: #f97066; color: #f97066; }
+
+    /* ===== HERO ===== */
+    #hero {
+      min-height: 100vh; display: flex; align-items: center; padding-top: 80px;
+      position: relative; overflow: hidden;
+    }
+    .hero-glow {
+      position: absolute; width: 700px; height: 700px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(124,106,255,0.13) 0%, transparent 70%);
+      top: -200px; left: 50%; transform: translateX(-50%); pointer-events: none;
+    }
+    .hero-inner { text-align: center; position: relative; z-index: 1; max-width: 800px; margin: 0 auto; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px;
+      border-radius: 999px; background: var(--purple-dim);
+      border: 1px solid var(--border-accent); font-size: 13px;
+      color: var(--purple-light); margin-bottom: 28px; font-weight: 500;
+    }
+    .hero-badge .dot {
+      width: 6px; height: 6px; background: var(--purple); border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.75); }
+    }
+    .hero-title { font-size: clamp(40px, 7vw, 72px); font-weight: 700; line-height: 1.08; margin-bottom: 24px; color: var(--text-primary); }
+    .hero-title .accent { color: var(--purple-light); }
+    .hero-subtitle { font-size: 20px; color: var(--text-secondary); margin-bottom: 48px; line-height: 1.6; }
+    .hero-cta-group { display: flex; gap: 16px; justify-content: center; align-items: center; }
+    .btn-primary {
+      padding: 14px 36px; background: var(--purple); color: #fff; border: none;
+      border-radius: var(--radius-sm); font-size: 16px; font-weight: 600; cursor: pointer;
+      text-decoration: none; transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    }
+    .btn-primary:hover { background: var(--purple-light); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(124,106,255,0.35); }
+    .btn-ghost {
+      padding: 14px 28px; background: transparent; color: var(--text-secondary);
+      border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 15px;
+      font-weight: 500; cursor: pointer; text-decoration: none; transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-ghost:hover { border-color: var(--purple); color: var(--text-primary); }
+
+    /* Steps row */
+    .steps-row { display: flex; align-items: center; justify-content: center; gap: 0; margin-top: 72px; }
+    .step-pill {
+      display: flex; align-items: center; gap: 10px; padding: 14px 24px;
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-xl);
+      font-size: 14px; font-weight: 500; color: var(--text-secondary); transition: border-color 0.2s, color 0.2s;
+    }
+    .step-pill:hover { border-color: var(--border-accent); color: var(--text-primary); }
+    .step-num {
+      width: 26px; height: 26px; background: var(--purple-dim);
+      border: 1px solid var(--border-accent); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: var(--purple-light);
+    }
+    .step-arrow { width: 40px; height: 1px; background: linear-gradient(90deg, var(--border), var(--border-accent), var(--border)); position: relative; }
+    .step-arrow::after { content: ''; position: absolute; right: -4px; top: -3px; border-left: 6px solid var(--border-accent); border-top: 3px solid transparent; border-bottom: 3px solid transparent; }
+
+    /* ===== ABOUT ===== */
+    #about { background: var(--bg-secondary); }
+    .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+    .about-visual { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px; display: flex; flex-direction: column; gap: 16px; }
+    .about-card-mini {
+      background: var(--bg-primary); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 16px 20px;
+      display: flex; align-items: center; gap: 14px; transition: border-color 0.2s;
+    }
+    .about-card-mini:hover { border-color: var(--border-accent); }
+    .icon-box { width: 40px; height: 40px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .icon-box.purple { background: var(--purple-dim); }
+    .icon-box.teal { background: var(--teal-dim); }
+    .icon-box.amber { background: rgba(251,191,36,0.1); }
+    .about-card-mini strong { display: block; font-size: 14px; color: var(--text-primary); margin-bottom: 2px; }
+    .about-card-mini span { font-size: 13px; color: var(--text-secondary); }
+    .about-text .section-subtitle { max-width: 100%; }
+    .about-bullets { margin-top: 24px; display: flex; flex-direction: column; gap: 12px; }
+    .about-bullet { display: flex; align-items: flex-start; gap: 12px; font-size: 15px; color: var(--text-secondary); }
+    .about-bullet::before { content: ''; width: 6px; height: 6px; background: var(--purple); border-radius: 50%; margin-top: 8px; flex-shrink: 0; }
+
+    /* ===== FEATURES ===== */
+    .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .feature-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 28px 24px;
+      transition: border-color 0.25s, transform 0.25s, background 0.25s;
+      position: relative; overflow: hidden;
+    }
+    .feature-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--purple), transparent);
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .feature-card:hover { border-color: var(--border-accent); transform: translateY(-4px); background: var(--bg-card-hover); }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-icon {
+      width: 48px; height: 48px; background: var(--purple-dim); border: 1px solid var(--border-accent);
+      border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center;
+      font-size: 22px; margin-bottom: 20px;
+    }
+    .feature-card h3 { font-size: 17px; margin-bottom: 10px; color: var(--text-primary); }
+    .feature-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.65; }
+    .feature-card.wide { grid-column: span 2; }
+    .feature-tag {
+      display: inline-block; margin-top: 16px; font-size: 11px; font-weight: 600;
+      letter-spacing: 1px; text-transform: uppercase; color: var(--purple-light);
+      background: var(--purple-dim); padding: 4px 10px; border-radius: 4px;
+    }
+
+    /* ===== PROBLEM / SOLUTION ===== */
+    #problem { background: var(--bg-secondary); }
+    .ps-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+    .ps-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 36px 32px; }
+    .ps-card.solution { border-color: rgba(45,212,191,0.25); }
+    .ps-card-label { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+    .ps-card.problem .ps-card-label { color: #f97066; }
+    .ps-card.solution .ps-card-label { color: var(--teal); }
+    .ps-card-label span { font-size: 16px; }
+    .ps-card h3 { font-size: 22px; margin-bottom: 20px; }
+    .ps-list { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+    .ps-list li { display: flex; align-items: flex-start; gap: 12px; font-size: 15px; color: var(--text-secondary); }
+    .ps-icon { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; margin-top: 1px; }
+    .ps-card.problem .ps-icon { background: rgba(249,112,102,0.15); color: #f97066; }
+    .ps-card.solution .ps-icon { background: rgba(45,212,191,0.12); color: var(--teal); }
+
+    /* ===== WORKFLOW ===== */
+    .workflow-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; position: relative; }
+    .workflow-connector {
+      position: absolute; top: 48px; left: calc(25% - 20px); width: calc(75% + 0px); height: 1px;
+      background: linear-gradient(90deg, var(--purple-dim), var(--border-accent), var(--purple-dim));
+      pointer-events: none;
+    }
+    .workflow-step {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 28px 20px 24px; text-align: center; transition: border-color 0.2s, transform 0.2s; position: relative;
+    }
+    .workflow-step:hover { border-color: var(--border-accent); transform: translateY(-3px); }
+    .workflow-step-num {
+      width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border-accent);
+      background: var(--purple-dim); display: flex; align-items: center; justify-content: center;
+      font-size: 18px; margin: 0 auto 16px;
+    }
+    .workflow-step-label { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--purple); margin-bottom: 8px; }
+    .workflow-step h4 { font-size: 16px; margin-bottom: 8px; }
+    .workflow-step p { font-size: 13px; color: var(--text-secondary); }
+
+    /* ===== UI PREVIEW ===== */
+    #preview { background: var(--bg-secondary); }
+    .preview-wrapper { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-xl); overflow: hidden; }
+    .preview-titlebar { display: flex; align-items: center; gap: 8px; padding: 14px 20px; background: var(--bg-primary); border-bottom: 1px solid var(--border); }
+    .dot-red, .dot-yellow, .dot-green { width: 11px; height: 11px; border-radius: 50%; }
+    .dot-red { background: #ff5f57; } .dot-yellow { background: #ffbd2e; } .dot-green { background: #28ca41; }
+    .preview-url { flex: 1; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 5px 12px; font-size: 12px; color: var(--text-muted); text-align: center; }
+    .preview-body { display: grid; grid-template-columns: 220px 1fr 280px; height: 440px; }
+    .preview-sidebar { background: var(--bg-primary); border-right: 1px solid var(--border); padding: 20px 16px; }
+    .preview-sidebar-title { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 16px; }
+    .note-item { padding: 10px 12px; border-radius: var(--radius-sm); margin-bottom: 8px; cursor: pointer; transition: background 0.2s; }
+    .note-item:hover { background: var(--bg-card); }
+    .note-item.active { background: var(--purple-dim); border: 1px solid var(--border-accent); }
+    .note-item-title { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
+    .note-item-date { font-size: 11px; color: var(--text-muted); }
+    .preview-main { display: grid; grid-template-rows: 1fr 1fr; border-right: 1px solid var(--border); }
+    .preview-image-panel { padding: 20px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px; }
+    .preview-panel-label { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); }
+    .preview-image-box { flex: 1; background: var(--bg-primary); border: 1px dashed var(--border); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: var(--text-muted); font-size: 13px; }
+    .preview-image-box .big-icon { font-size: 28px; }
+    .preview-text-panel { padding: 20px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+    .preview-text-line { height: 11px; background: var(--bg-primary); border-radius: 4px; animation: shimmer 2s infinite; }
+    @keyframes shimmer { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
+    .preview-chat { padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+    .chat-panel-header { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--purple-light); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .chat-bubble { padding: 10px 14px; border-radius: var(--radius-md); font-size: 13px; line-height: 1.5; max-width: 90%; }
+    .chat-bubble.user { background: var(--purple-dim); border: 1px solid var(--border-accent); color: var(--text-primary); align-self: flex-end; }
+    .chat-bubble.ai { background: var(--bg-primary); border: 1px solid var(--border); color: var(--text-secondary); align-self: flex-start; }
+    .chat-input-bar { margin-top: auto; display: flex; gap: 8px; padding: 0 2px; }
+    .chat-input-fake { flex: 1; background: var(--bg-primary); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 12px; color: var(--text-muted); }
+    .chat-send-btn { background: var(--purple); border: none; border-radius: var(--radius-sm); width: 32px; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; }
+
+    /* ===== TECH STACK ===== */
+    .tech-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+    .tech-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px 20px; text-align: center; transition: border-color 0.2s, transform 0.2s; }
+    .tech-card:hover { border-color: var(--border-accent); transform: translateY(-3px); }
+    .tech-card-icon { font-size: 32px; margin-bottom: 14px; }
+    .tech-card-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+    .tech-card h4 { font-size: 18px; margin-bottom: 6px; }
+    .tech-card p { font-size: 13px; color: var(--text-secondary); }
+
+    /* ===== TEAM ===== */
+    #team { background: var(--bg-secondary); }
+    .team-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+    .team-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px 20px; text-align: center; transition: border-color 0.2s, transform 0.2s; }
+    .team-card:hover { border-color: var(--border-accent); transform: translateY(-4px); }
+    .team-avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--purple-dim); border: 2px solid var(--border-accent); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: var(--purple-light); font-family: 'Space Grotesk', sans-serif; margin: 0 auto 16px; }
+    .team-card h4 { font-size: 16px; margin-bottom: 6px; }
+    .team-card p { font-size: 13px; color: var(--text-secondary); }
+    .team-card .role-badge { display: inline-block; margin-top: 10px; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--purple-light); background: var(--purple-dim); padding: 4px 10px; border-radius: 4px; }
+
+    /* ===== FOOTER ===== */
+    footer { background: var(--bg-primary); border-top: 1px solid var(--border); padding: 60px 0 40px; text-align: center; }
+    .footer-logo { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700; margin-bottom: 12px; }
+    .footer-logo .accent { color: var(--purple-light); }
+    .footer-tagline { font-size: 15px; color: var(--text-secondary); margin-bottom: 8px; }
+    .footer-built { font-size: 13px; color: var(--text-muted); margin-bottom: 40px; }
+    .footer-links { display: flex; gap: 32px; justify-content: center; list-style: none; margin-bottom: 40px; }
+    .footer-links a { font-size: 14px; color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
+    .footer-links a:hover { color: var(--text-primary); }
+    .footer-bottom { font-size: 13px; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 24px; }
+
+    /* ===== AUTH MODAL ===== */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 999;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg-card); border: 1px solid var(--border-accent);
+      border-radius: var(--radius-xl); padding: 40px 36px; width: 100%; max-width: 420px;
+      position: relative; animation: modalIn 0.25s ease;
+    }
+    @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(12px); } to { opacity: 1; transform: none; } }
+    .modal-close {
+      position: absolute; top: 16px; right: 18px;
+      background: none; border: none; font-size: 20px; color: var(--text-muted);
+      cursor: pointer; line-height: 1; transition: color 0.2s;
+    }
+    .modal-close:hover { color: var(--text-primary); }
+    .modal-logo { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .modal-logo-icon { width: 30px; height: 30px; background: var(--purple); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+    .modal-subtitle { font-size: 14px; color: var(--text-secondary); margin-bottom: 28px; }
+    .modal-tabs { display: flex; gap: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 28px; }
+    .modal-tab {
+      flex: 1; padding: 10px; text-align: center; font-size: 14px; font-weight: 500;
+      cursor: pointer; background: none; border: none; color: var(--text-muted);
+      transition: background 0.2s, color 0.2s;
+    }
+    .modal-tab.active { background: var(--purple); color: #fff; }
+    .modal-field { margin-bottom: 16px; }
+    .modal-field label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 7px; }
+    .modal-field input {
+      width: 100%; padding: 11px 14px; background: var(--bg-primary);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 14px; color: var(--text-primary); outline: none;
+      transition: border-color 0.2s; font-family: inherit;
+    }
+    .modal-field input:focus { border-color: var(--purple); }
+    .modal-field input::placeholder { color: var(--text-muted); }
+    .modal-submit {
+      width: 100%; padding: 13px; background: var(--purple); color: #fff; border: none;
+      border-radius: var(--radius-sm); font-size: 15px; font-weight: 600;
+      cursor: pointer; margin-top: 8px; font-family: inherit;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .modal-submit:hover { background: var(--purple-light); transform: translateY(-1px); }
+    .modal-error { font-size: 13px; color: #f97066; margin-top: 10px; min-height: 18px; }
+    .modal-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; }
+    .modal-divider::before, .modal-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .modal-divider span { font-size: 12px; color: var(--text-muted); }
+    .btn-demo-login {
+      width: 100%; padding: 11px; background: var(--purple-dim);
+      border: 1px solid var(--border-accent); border-radius: var(--radius-sm);
+      font-size: 14px; font-weight: 500; color: var(--purple-light);
+      cursor: pointer; font-family: inherit; transition: background 0.2s;
+    }
+    .btn-demo-login:hover { background: rgba(124,106,255,0.2); }
+
+    /* ===== DEMO SECTION ===== */
+    #demo { background: var(--bg-secondary); }
+    .demo-locked {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-xl);
+      padding: 64px 32px; text-align: center;
+    }
+    .demo-locked-icon { font-size: 48px; margin-bottom: 20px; }
+    .demo-locked h3 { font-size: 24px; margin-bottom: 12px; }
+    .demo-locked p { font-size: 15px; color: var(--text-secondary); max-width: 400px; margin: 0 auto 28px; }
+    .demo-app { display: none; }
+    .demo-app.visible { display: block; }
+    .demo-locked.hidden { display: none; }
+
+    /* Demo interface */
+    .demo-interface {
+      background: var(--bg-card); border: 1px solid var(--border-accent);
+      border-radius: var(--radius-xl); overflow: hidden;
+    }
+    .demo-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 24px; border-bottom: 1px solid var(--border);
+      background: var(--bg-primary);
+    }
+    .demo-toolbar-title { font-size: 14px; font-weight: 600; color: var(--purple-light); display: flex; align-items: center; gap: 8px; }
+    .demo-user-tag { font-size: 12px; color: var(--text-muted); background: var(--purple-dim); padding: 4px 10px; border-radius: 999px; }
+    .demo-body { display: grid; grid-template-columns: 1fr 1fr; min-height: 520px; }
+    .demo-left { padding: 28px; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 20px; }
+    .demo-right { padding: 28px; display: flex; flex-direction: column; gap: 16px; }
+    .demo-section-label { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; }
+    .demo-upload-area {
+      border: 2px dashed var(--border); border-radius: var(--radius-lg);
+      padding: 32px 20px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s;
+    }
+    .demo-upload-area:hover { border-color: var(--purple); background: var(--purple-dim); }
+    .demo-upload-area.has-image { border-color: var(--border-accent); background: var(--purple-dim); }
+    .demo-upload-icon { font-size: 32px; margin-bottom: 10px; }
+    .demo-upload-text { font-size: 14px; color: var(--text-secondary); }
+    .demo-upload-hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+    .demo-img-preview { max-width: 100%; max-height: 200px; border-radius: var(--radius-md); object-fit: contain; display: none; }
+    .demo-img-preview.visible { display: block; margin: 0 auto; }
+    input[type="file"] { display: none; }
+    .demo-text-input {
+      width: 100%; padding: 14px 16px; background: var(--bg-primary);
+      border: 1px solid var(--border); border-radius: var(--radius-md);
+      font-size: 14px; color: var(--text-primary); resize: vertical; min-height: 120px;
+      font-family: inherit; outline: none; transition: border-color 0.2s; line-height: 1.6;
+    }
+    .demo-text-input:focus { border-color: var(--purple); }
+    .demo-text-input::placeholder { color: var(--text-muted); }
+    .demo-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .demo-action-btn {
+      padding: 9px 18px; background: var(--bg-primary);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 500; color: var(--text-secondary);
+      cursor: pointer; transition: all 0.2s; font-family: inherit;
+    }
+    .demo-action-btn:hover { border-color: var(--purple); color: var(--text-primary); }
+    .demo-action-btn.primary { background: var(--purple); border-color: var(--purple); color: #fff; }
+    .demo-action-btn.primary:hover { background: var(--purple-light); }
+    .demo-action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Demo chat */
+    .demo-chat-messages {
+      flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
+      max-height: 320px; padding-right: 4px;
+    }
+    .demo-chat-messages::-webkit-scrollbar { width: 4px; }
+    .demo-chat-messages::-webkit-scrollbar-track { background: transparent; }
+    .demo-chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .demo-msg { padding: 12px 14px; border-radius: var(--radius-md); font-size: 14px; line-height: 1.6; max-width: 95%; }
+    .demo-msg.ai { background: var(--bg-primary); border: 1px solid var(--border); color: var(--text-secondary); align-self: flex-start; }
+    .demo-msg.user { background: var(--purple-dim); border: 1px solid var(--border-accent); color: var(--text-primary); align-self: flex-end; }
+    .demo-msg.loading { display: flex; align-items: center; gap: 8px; color: var(--text-muted); }
+    .loading-dots span { display: inline-block; width: 6px; height: 6px; background: var(--purple); border-radius: 50%; animation: dotBounce 1.2s infinite; }
+    .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dotBounce { 0%, 100% { transform: translateY(0); opacity: 0.4; } 50% { transform: translateY(-5px); opacity: 1; } }
+    .demo-chat-input-row { display: flex; gap: 8px; margin-top: auto; }
+    .demo-chat-input {
+      flex: 1; padding: 10px 14px; background: var(--bg-primary);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 14px; color: var(--text-primary); font-family: inherit; outline: none;
+      transition: border-color 0.2s;
+    }
+    .demo-chat-input:focus { border-color: var(--purple); }
+    .demo-chat-input::placeholder { color: var(--text-muted); }
+    .demo-chat-send {
+      padding: 10px 16px; background: var(--purple); color: #fff; border: none;
+      border-radius: var(--radius-sm); cursor: pointer; font-size: 14px;
+      transition: background 0.2s; font-family: inherit;
+    }
+    .demo-chat-send:hover { background: var(--purple-light); }
+    .demo-chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 900px) {
+      .about-grid, .ps-grid { grid-template-columns: 1fr; }
+      .features-grid { grid-template-columns: 1fr 1fr; }
+      .feature-card.wide { grid-column: span 1; }
+      .workflow-steps { grid-template-columns: 1fr 1fr; }
+      .workflow-connector { display: none; }
+      .tech-grid { grid-template-columns: 1fr 1fr; }
+      .team-grid { grid-template-columns: 1fr 1fr; }
+      .preview-body { grid-template-columns: 1fr; height: auto; }
+      .preview-sidebar, .preview-main { display: none; }
+      .steps-row { flex-direction: column; gap: 12px; }
+      .step-arrow { width: 1px; height: 20px; background: var(--border); }
+      .step-arrow::after { display: none; }
+      .nav-links { display: none; }
+      .demo-body { grid-template-columns: 1fr; }
+      .demo-left { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+    @media (max-width: 600px) {
+      .features-grid, .tech-grid, .team-grid { grid-template-columns: 1fr; }
+      .hero-cta-group { flex-direction: column; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ===== AUTH MODAL ===== -->
+  <div class="modal-overlay" id="authModal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div class="modal-logo">
+        <div class="modal-logo-icon">📓</div>
+        StudyBuddy AI
+      </div>
+      <p class="modal-subtitle">Sign in to access the live demo and all features.</p>
+
+      <div class="modal-tabs">
+        <button class="modal-tab active" id="tabLogin" onclick="switchTab('login')">Log In</button>
+        <button class="modal-tab" id="tabSignup" onclick="switchTab('signup')">Sign Up</button>
+      </div>
+
+      <!-- Login form -->
+      <div id="loginForm">
+        <div class="modal-field">
+          <label>Email</label>
+          <input type="email" id="loginEmail" placeholder="you@example.com" />
+        </div>
+        <div class="modal-field">
+          <label>Password</label>
+          <input type="password" id="loginPassword" placeholder="••••••••" />
+        </div>
+        <button class="modal-submit" onclick="handleLogin()">Log In →</button>
+        <div class="modal-error" id="loginError"></div>
+        <div class="modal-divider"><span>or</span></div>
+        <button class="btn-demo-login" onclick="demoLogin()">✨ Continue with Demo Account</button>
+      </div>
+
+      <!-- Signup form -->
+      <div id="signupForm" style="display:none;">
+        <div class="modal-field">
+          <label>Full Name</label>
+          <input type="text" id="signupName" placeholder="Your name" />
+        </div>
+        <div class="modal-field">
+          <label>Email</label>
+          <input type="email" id="signupEmail" placeholder="you@example.com" />
+        </div>
+        <div class="modal-field">
+          <label>Password</label>
+          <input type="password" id="signupPassword" placeholder="Min. 6 characters" />
+        </div>
+        <button class="modal-submit" onclick="handleSignup()">Create Account →</button>
+        <div class="modal-error" id="signupError"></div>
+        <div class="modal-divider"><span>or</span></div>
+        <button class="btn-demo-login" onclick="demoLogin()">✨ Try with Demo Account</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ===== NAVBAR ===== */-->
+  <nav>
+    <div class="nav-inner">
+      <a href="#hero" class="nav-logo">
+        <span>📓</span>
+        StudyBuddy AI
+      </a>
+      <ul class="nav-links">
+        <li><a href="#about">About</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#workflow">Workflow</a></li>
+        <li><a href="#demo">Demo</a></li>
+        <li><a href="#tech">Tech Stack</a></li>
+        <li><a href="#team">Team</a></li>
+      </ul>
+      <div class="nav-actions">
+        <!-- Logged-out buttons -->
+        <div id="navAuthButtons">
+          <button class="btn-nav-ghost" onclick="openModal('login')">Log In</button>
+          &nbsp;
+          <button class="btn-nav" onclick="openModal('login'); document.getElementById('demo').scrollIntoView({behavior:'smooth'})">Try Demo</button>
+        </div>
+        <!-- Logged-in user -->
+        <div class="nav-user" id="navUser">
+          <div class="nav-avatar" id="navAvatar"></div>
+          <span class="nav-username" id="navUsername"></span>
+          <button class="btn-logout" onclick="handleLogout()">Log Out</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+
+  <!-- ===== HERO ===== -->
+  <section id="hero">
+    <div class="hero-glow"></div>
+    <div class="container">
+      <div class="hero-inner fade-in">
+        <div class="hero-badge">
+          <span class="dot"></span>
+          AI-Powered Study Tool
+        </div>
+        <h1 class="hero-title">
+          Study<span class="accent">Buddy</span> AI
+        </h1>
+        <p class="hero-subtitle">
+          Turn messy handwritten notes into your smartest study partner — digitize, summarize, quiz, and learn with AI.
+        </p>
+        <div class="hero-cta-group">
+          <a href="#demo" class="btn-primary" onclick="handleTryDemo(event)">Try Demo</a>
+          <a href="#about" class="btn-ghost">Learn More →</a>
+        </div>
+
+        <div class="steps-row">
+          <div class="step-pill"><div class="step-num">1</div>📤 Upload Notes</div>
+          <div class="step-arrow"></div>
+          <div class="step-pill"><div class="step-num">2</div>🤖 AI Digitizes</div>
+          <div class="step-arrow"></div>
+          <div class="step-pill"><div class="step-num">3</div>📚 Smart Study</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ===== ABOUT ===== -->
+  <section id="about" class="section">
+    <div class="container">
+      <div class="about-grid">
+        <div class="about-visual fade-in">
+          <div class="about-card-mini">
+            <div class="icon-box purple">📷</div>
+            <div><strong>Upload your notes</strong><span>Photo, scan, or any image of handwritten notes</span></div>
+          </div>
+          <div class="about-card-mini">
+            <div class="icon-box teal">✨</div>
+            <div><strong>AI converts to clean text</strong><span>Powered by Google Gemini — accurate, fast, context-aware</span></div>
+          </div>
+          <div class="about-card-mini">
+            <div class="icon-box amber">💬</div>
+            <div><strong>Chat with your AI tutor</strong><span>Ask questions, get summaries, generate flashcards</span></div>
+          </div>
+        </div>
+        <div class="about-text fade-in">
+          <p class="section-label">What is StudyBuddy AI?</p>
+          <h2 class="section-title">Your notes, supercharged by AI</h2>
+          <p class="section-subtitle">StudyBuddy AI is a web application built for students who want to spend less time rewriting and more time actually learning. Take a photo of your handwritten notes and our AI handles the rest.</p>
+          <div class="about-bullets">
+            <div class="about-bullet">Upload any image of handwritten notes — messy, quick, or multi-page</div>
+            <div class="about-bullet">Google Gemini reads and transcribes your handwriting into clean, editable text</div>
+            <div class="about-bullet">An integrated AI tutor can summarize, quiz you, explain topics, and create flashcards instantly</div>
+            <div class="about-bullet">No complex setup — it just works in your browser</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ===== FEATURES ===== -->
+  <section id="features" class="section">
+    <div class="container">
+      <div class="section-header fade-in">
+        <p class="section-label">Features</p>
+        <h2 class="section-title">Everything you need to study smarter</h2>
+        <p class="section-subtitle">Five powerful tools, one clean interface — designed around how students actually study.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card wide fade-in">
+          <div class="feature-icon">🖊️</div>
+          <h3>Handwriting to Text Conversion</h3>
+          <p>Upload any photo of handwritten notes and our AI (powered by Google Gemini) accurately transcribes them into clean, readable digital text — handling everything from tidy cursive to rushed lecture scribbles.</p>
+          <span class="feature-tag">Core Feature</span>
+        </div>
+        <div class="feature-card fade-in">
+          <div class="feature-icon">💬</div>
+          <h3>AI Study Assistant</h3>
+          <p>Chat directly with your notes. Ask follow-up questions, request deeper explanations, or explore related concepts — your AI tutor is always in context.</p>
+          <span class="feature-tag">Chat</span>
+        </div>
+        <div class="feature-card fade-in">
+          <div class="feature-icon">📝</div>
+          <h3>Auto Summaries</h3>
+          <p>Get a crisp, structured summary of any uploaded note in seconds. Great for revision sessions when time is short.</p>
+          <span class="feature-tag">Productivity</span>
+        </div>
+        <div class="feature-card fade-in">
+          <div class="feature-icon">🧪</div>
+          <h3>Quiz Generator</h3>
+          <p>Instantly generate multiple-choice or short-answer quizzes from your notes. Test your knowledge without writing a single question manually.</p>
+          <span class="feature-tag">Study</span>
+        </div>
+        <div class="feature-card fade-in">
+          <div class="feature-icon">🃏</div>
+          <h3>Flashcard Generator</h3>
+          <p>Turn key concepts and definitions from your notes into ready-to-use flashcards for active recall practice — the most effective way to retain information.</p>
+          <span class="feature-tag">Memory</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ===== PROBLEM & SOLUTION ===== -->
+  <section id="problem" class="section">
+    <div class="container">
+      <div class="section-header fade-in">
+        <p class="section-label">Problem &amp; Solution</p>
+        <h2 class="section-title">Why StudyBuddy AI exists</h2>
+      </div>
+      <div class="ps-grid fade-in">
+        <div class="ps-card problem">
+          <div class="ps-card-label"><span>⚠️</span> The Problem</div>
+          <h3>Notes are a mess</h3>
+          <ul class="ps-list">
+            <li><div class="ps-icon">✕</div>Handwritten notes are often illegible, unorganized, and hard to search through later.</li>
+            <li><div class="ps-icon">✕</div>Revising from raw handwriting is slow and mentally exhausting.</li>
+            <li><div class="ps-icon">✕</div>Students waste hours rewriting notes digitally just to make them usable.</li>
+            <li><div class="ps-icon">✕</div>Creating quizzes and flashcards from scratch takes more time than actually studying.</li>
+          </ul>
+        </div>
+        <div class="ps-card solution">
+          <div class="ps-card-label"><span>✓</span> The Solution</div>
+          <h3>AI does the heavy lifting</h3>
+          <ul class="ps-list">
+            <li><div class="ps-icon">✓</div>Instant digitization — upload once, get clean text in seconds with no manual typing.</li>
+            <li><div class="ps-icon">✓</div>AI-generated summaries let you review entire chapters in minutes.</li>
+            <li><div class="ps-icon">✓</div>Auto-generated quizzes and flashcards make active recall effortless.</li>
+            <li><div class="ps-icon">✓</div>A built-in AI tutor answers your questions without leaving the app.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ===== WORKFLOW ===== -->
+  <section id="workflow" class="section">
+    <div class="container">
+      <div class="section-header fade-in">
+        <p class="section-label">How It Works</p>
+        <h2 class="section-title">From photo to smart study in four steps</h2>
+        <p class="section-subtitle">The entire process takes under 30 seconds.</p>
+      </div>
+      <div class="workflow-steps fade-in" style="position: relative;">
+        <div class="workflow-connector"></div>
+        <div class="workflow-step">
+          <div class="workflow-step-num">📸</div>
+          <div class="workflow-step-label">Step 01</div>
+          <h4>Upload Image</h4>
+          <p>Drag and drop or click to upload a photo or scan of your handwritten notes.</p>
+        </div>
+        <div class="workflow-step">
+          <div class="workflow-step-num">🤖</div>
+          <div class="workflow-step-label">Step 02</div>
+          <h4>AI Processes</h4>
+          <p>Google Gemini reads and transcribes your handwriting into clean, structured text.</p>
+        </div>
+        <div class="workflow-step">
+          <div class="workflow-step-num">📄</div>
+          <div class="workflow-step-label">Step 03</div>
+          <h4>View Clean Notes</h4>
+          <p>Review your digitized notes alongside the original image in a split-screen view.</p>
+        </div>
+        <div class="workflow-step">
+          <div class="workflow-step-num">🎯</div>
+          <div class="workflow-step-label">Step 04</div>
+          <h4>Chat / Quiz / Study</h4>
+          <p>Ask questions, generate quizzes, create flashcards, or get a quick summary.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ===== UI PREVIEW ===== -->
+  <section id="preview" class="section">
+    <div class="container">
+      <div class="section-header fade-in">
+        <p class="section-label">UI Preview</p>
+        <h2 class="section-title">Clean, focused interface</h2>
+        <p class="section-subtitle">Designed to keep you in the zone — no clutter, just your notes and your AI tutor.</p>
+      </div>
+      <div class="preview-wrapper fade-in">
+        <div class="preview-titlebar">
+          <div class="dot-red"></div><div class="dot-yellow"></div><div class="dot-green"></div>
+          <div class="preview-url">studybuddy.ai/notes</div>
+        </div>
+        <div class="preview-body">
+          <div class="preview-sidebar">
+            <div class="preview-sidebar-title">My Notes</div>
+            <div class="note-item active"><div class="note-item-title">Physics — Ch. 4</div><div class="note-item-date">Today</div></div>
+            <div class="note-item"><div class="note-item-title">Calculus Limits</div><div class="note-item-date">Yesterday</div></div>
+            <div class="note-item"><div class="note-item-title">Organic Chemistry</div><div class="note-item-date">3 days ago</div></div>
+            <div class="note-item"><div class="note-item-title">History — WW2</div><div class="note-item-date">1 week ago</div></div>
+          </div>
+          <div class="preview-main">
+            <div class="preview-image-panel">
+              <div class="preview-panel-label">Original Image</div>
+              <div class="preview-image-box"><div class="big-icon">🗒️</div>Handwritten note image</div>
+            </div>
+            <div class="preview-text-panel">
+              <div class="preview-panel-label">Digitized Text</div>
+              <div class="preview-text-line" style="width: 90%;"></div>
+              <div class="preview-text-line" style="width: 75%;"></div>
+              <div class="preview-text-line" style="width: 85%;"></div>
+              <div class="preview-text-line" style="width: 60%;"></div>
+              <div class="preview-text-line" style="width: 80%;"></div>
+              <div class="preview-text-line" style="width: 70%;"></div>
+              <div class="preview-text-line" style="width: 55%;"></div>
+            </div>
+          </div>
+          <div class="preview-chat" style="display: flex; flex-direction: column;">
+            <div class="chat-panel-header"><span>✦</span> AI Tutor</div>
+            <div class="chat-bubble ai">Hi! I've digitized your notes. What would you like to do — summary, quiz, or flashcards?</div>
+            <div class="chat-bubble user">Give me a quick summary</div>
+            <div class="chat-bubble ai">Sure! Your notes cover Newton's Laws of Motion, focusing on inertia, force-mass-acceleration, and action-reaction pairs...</div>
+            <div class="chat-input-bar">
+              <div class="chat-input-fake">Ask your AI tutor...</div>
+              <button class="chat-send-btn">↑</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ===== LIVE DEMO ===== -->
+  <section id="demo" class="section">
+    <div class="container">
+      <div class="section-header fade-in">
+        <p class="section-label">Live Demo</p>
+        <h2 class="section-title">Try it yourself</h2>
+        <p class="section-subtitle">Upload an image of handwritten notes or type your notes directly — then chat with the AI tutor.</p>
+      </div>
+
+      <!-- Locked state (not logged in) -->
+      <div class="demo-locked fade-in" id="demoLocked">
+        <div class="demo-locked-icon">🔒</div>
+        <h3>Log in to access the demo</h3>
+        <p>Create a free account or use the demo login to try StudyBuddy AI instantly — no setup required.</p>
+        <button class="btn-primary" onclick="openModal('login')">Log In / Sign Up</button>
+        &nbsp;&nbsp;
+        <button class="btn-ghost" onclick="demoLogin()">✨ Try Demo Account</button>
+      </div>
+
+      <!-- Unlocked demo app -->
+      <div class="demo-app fade-in" id="demoApp">
+        <div class="demo-interface">
+          <div class="demo-toolbar">
+            <div class="demo-toolbar-title">✦ StudyBuddy AI — Live Demo</div>
+            <div class="demo-user-tag" id="demoUserTag"></div>
+          </div>
+          <div class="demo-body">
+            <!-- Left: Input -->
+            <div class="demo-left">
+              <div>
+                <div class="demo-section-label">📷 Upload Image (optional)</div>
+                <div class="demo-upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                  <div class="demo-upload-icon">📤</div>
+                  <div class="demo-upload-text">Click to upload a photo of your notes</div>
+                  <div class="demo-upload-hint">PNG, JPG, JPEG supported</div>
+                </div>
+                <img id="imgPreview" class="demo-img-preview" alt="Uploaded notes" />
+                <input type="file" id="fileInput" accept="image/*" onchange="handleFileUpload(event)" />
+              </div>
+
+              <div>
+                <div class="demo-section-label">✏️ Or type / paste your notes</div>
+                <textarea class="demo-text-input" id="notesInput" placeholder="Type your notes here e.g. Newton's first law states that an object at rest stays at rest unless acted upon by an external force..."></textarea>
+              </div>
+
+              <div class="demo-actions">
+                <button class="demo-action-btn primary" onclick="analyzeNotes()" id="analyzeBtn">🤖 Analyze Notes</button>
+                <button class="demo-action-btn" onclick="quickAction('summary')" id="summaryBtn" disabled>📝 Summary</button>
+                <button class="demo-action-btn" onclick="quickAction('quiz')" id="quizBtn" disabled>🧪 Quiz Me</button>
+                <button class="demo-action-btn" onclick="quickAction('flashcards')" id="flashBtn" disabled>🃏 Flashcards</button>
+              </div>
+            </div>
+
+            <!-- Right: Chat -->
+            <div class="demo-right">
+              <div class="demo-section-label">💬 AI Tutor Chat</div>
+              <div class="demo-chat-messages" id="chatMessages">
+                <div class="demo-msg ai">👋 Hello! I'm your AI study tutor. Upload an image of your notes or type them in, then click <strong>Analyze Notes</strong> to get started. You can also ask me anything!</div>
+              </div>
+              <div class="demo-chat-input-row">
+                <input type="text" class="demo-chat-input" id="chatInput" placeholder="Ask your AI tutor..." onkeydown="if(event.key==='Enter') sendChat()" />
+                <button class="demo-chat-send" id="chatSendBtn" onclick="sendChat()">Send</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ===== TECH STACK ===== -->
+  <section id="tech" class="section">
+    <div class="container">
+      <div class="section-header fade-in">
+        <p class="section-label">Tech Stack</p>
+        <h2 class="section-title">Built with modern tools</h2>
+        <p class="section-subtitle">A lightweight, fast, and reliable stack chosen for simplicity and power.</p>
+      </div>
+      <div class="tech-grid fade-in">
+        <div class="tech-card"><div class="tech-card-icon">🌐</div><div class="tech-card-label">Frontend</div><h4>HTML · CSS · JS</h4><p>Vanilla web tech — fast, dependency-free, runs in any browser.</p></div>
+        <div class="tech-card"><div class="tech-card-icon">🐍</div><div class="tech-card-label">Backend</div><h4>Python Flask</h4><p>Lightweight web server handling image uploads, AI calls, and responses.</p></div>
+        <div class="tech-card"><div class="tech-card-icon">✦</div><div class="tech-card-label">AI Engine</div><h4>Google Gemini</h4><p>State-of-the-art multimodal AI for handwriting recognition and tutoring.</p></div>
+        <div class="tech-card"><div class="tech-card-icon">🗃️</div><div class="tech-card-label">Storage</div><h4>JSON Files</h4><p>Simple, portable file-based storage — no database setup required.</p></div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ===== TEAM ===== -->
+  <section id="team" class="section">
+    <div class="container">
+      <div class="section-header fade-in">
+        <p class="section-label">The Team</p>
+        <h2 class="section-title">Built by students, for students</h2>
+      </div>
+      <div class="team-grid fade-in">
+        <div class="team-card"><div class="team-avatar">NP</div><h4>Niharika Pathak</h4><p>Full Stack Developer</p><span class="role-badge">Lead Dev</span></div>
+        <div class="team-card"><div class="team-avatar">VS</div><h4>Vancha Sravya</h4><p>AI & Backend Engineer</p><span class="role-badge">AI/ML</span></div>
+        <div class="team-card"><div class="team-avatar">VC</div><h4>Velpula Chandini</h4><p>UI/UX Designer</p><span class="role-badge">Design</span></div>
+        <div class="team-card"><div class="team-avatar">DK</div><h4>Dumpeti Koushik</h4><p>Product & QA</p><span class="role-badge">PM</span></div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ===== FOOTER ===== -->
+  <footer>
+    <div class="container">
+      <div class="footer-logo">StudyBuddy <span class="accent">AI</span></div>
+      <p class="footer-tagline">Turn messy handwritten notes into your smartest study partner.</p>
+      <p class="footer-built">🎓 Built for students · Powered by Google Gemini</p>
+      <ul class="footer-links">
+        <li><a href="#about">About</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#workflow">How It Works</a></li>
+        <li><a href="#tech">Tech Stack</a></li>
+        <li><a href="#team">Team</a></li>
+      </ul>
+      <p class="footer-bottom">© 2025 StudyBuddy AI. Made with ♥ for learners everywhere.</p>
+    </div>
+  </footer>
+
+
+  <script>
+    // ===== SCROLL ANIMATION =====
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.fade-in').forEach((el, i) => {
+      el.style.transitionDelay = (i % 4) * 0.08 + 's';
+      observer.observe(el);
+    });
+
+    // ===== AUTH STATE =====
+    // Simple in-memory user store (demo only)
+    const users = [
+      { email: 'demo@studybuddy.ai', password: 'demo123', name: 'Demo User' }
+    ];
+    let currentUser = null;
+
+    function openModal(tab) {
+      document.getElementById('authModal').classList.add('open');
+      switchTab(tab || 'login');
+    }
+    function closeModal() { document.getElementById('authModal').classList.remove('open'); }
+    document.getElementById('authModal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('authModal')) closeModal();
+    });
+
+    function switchTab(tab) {
+      document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
+      document.getElementById('signupForm').style.display = tab === 'signup' ? 'block' : 'none';
+      document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+      document.getElementById('tabSignup').classList.toggle('active', tab === 'signup');
+    }
+
+    function handleLogin() {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const errEl = document.getElementById('loginError');
+      errEl.textContent = '';
+      if (!email || !password) { errEl.textContent = 'Please fill in all fields.'; return; }
+      const user = users.find(u => u.email === email && u.password === password);
+      if (!user) { errEl.textContent = 'Invalid email or password.'; return; }
+      loginSuccess(user);
+    }
+
+    function handleSignup() {
+      const name = document.getElementById('signupName').value.trim();
+      const email = document.getElementById('signupEmail').value.trim();
+      const password = document.getElementById('signupPassword').value;
+      const errEl = document.getElementById('signupError');
+      errEl.textContent = '';
+      if (!name || !email || !password) { errEl.textContent = 'Please fill in all fields.'; return; }
+      if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; return; }
+      if (users.find(u => u.email === email)) { errEl.textContent = 'An account with this email already exists.'; return; }
+      const newUser = { email, password, name };
+      users.push(newUser);
+      loginSuccess(newUser);
+    }
+
+    function demoLogin() {
+      loginSuccess({ email: 'demo@studybuddy.ai', name: 'Demo User' });
+    }
+
+    function loginSuccess(user) {
+      currentUser = user;
+      closeModal();
+      updateNavUI();
+      unlockDemo();
+    }
+
+    function handleLogout() {
+      currentUser = null;
+      updateNavUI();
+      lockDemo();
+    }
+
+    function updateNavUI() {
+      const authBtns = document.getElementById('navAuthButtons');
+      const navUser = document.getElementById('navUser');
+      if (currentUser) {
+        authBtns.style.display = 'none';
+        navUser.classList.add('visible');
+        const initials = currentUser.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+        document.getElementById('navAvatar').textContent = initials;
+        document.getElementById('navUsername').textContent = currentUser.name;
+      } else {
+        authBtns.style.display = '';
+        navUser.classList.remove('visible');
+      }
+    }
+
+    function unlockDemo() {
+      document.getElementById('demoLocked').classList.add('hidden');
+      const app = document.getElementById('demoApp');
+      app.classList.add('visible');
+      document.getElementById('demoUserTag').textContent = '👤 ' + currentUser.name;
+    }
+
+    function lockDemo() {
+      document.getElementById('demoLocked').classList.remove('hidden');
+      document.getElementById('demoApp').classList.remove('visible');
+    }
+
+    function handleTryDemo(e) {
+      if (!currentUser) {
+        e.preventDefault();
+        openModal('login');
+      }
+    }
+
+    // ===== DEMO FUNCTIONALITY =====
+    let uploadedImageBase64 = null;
+    let notesContext = '';
+    let chatHistory = [];
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        uploadedImageBase64 = e.target.result.split(',')[1];
+        const preview = document.getElementById('imgPreview');
+        preview.src = e.target.result;
+        preview.classList.add('visible');
+        const area = document.getElementById('uploadArea');
+        area.classList.add('has-image');
+        area.querySelector('.demo-upload-text').textContent = '✓ ' + file.name;
+        area.querySelector('.demo-upload-hint').textContent = 'Click to replace';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function callClaude(messages, systemPrompt) {
+      const body = {
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt || 'You are StudyBuddy AI, an expert AI study tutor. Help students understand their notes, create summaries, generate quizzes, make flashcards, and answer questions. Be concise, clear, and encouraging.',
+        messages: messages
+      };
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      return data.content?.map(b => b.text || '').join('') || 'Sorry, I could not process that.';
+    }
+
+    function addMessage(role, text) {
+      const el = document.createElement('div');
+      el.className = 'demo-msg ' + role;
+      el.innerHTML = text.replace(/\n/g, '<br>');
+      document.getElementById('chatMessages').appendChild(el);
+      document.getElementById('chatMessages').scrollTop = 99999;
+      return el;
+    }
+
+    function addLoading() {
+      const el = document.createElement('div');
+      el.className = 'demo-msg ai loading';
+      el.innerHTML = '<span>AI is thinking</span><span class="loading-dots"><span></span><span></span><span></span></span>';
+      el.id = 'loadingMsg';
+      document.getElementById('chatMessages').appendChild(el);
+      document.getElementById('chatMessages').scrollTop = 99999;
+    }
+
+    function removeLoading() {
+      const el = document.getElementById('loadingMsg');
+      if (el) el.remove();
+    }
+
+    async function analyzeNotes() {
+      const textNotes = document.getElementById('notesInput').value.trim();
+      if (!uploadedImageBase64 && !textNotes) {
+        addMessage('ai', '⚠️ Please upload an image of your notes or type/paste them in the text area first.');
+        return;
+      }
+      document.getElementById('analyzeBtn').disabled = true;
+      addLoading();
+
+      let messages;
+      if (uploadedImageBase64) {
+        messages = [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: uploadedImageBase64 } },
+            { type: 'text', text: textNotes ? `Here is an image of handwritten notes. Additionally, here are some typed notes:\n${textNotes}\n\nPlease transcribe the handwritten notes from the image and give me a brief overview of what these notes cover.` : 'Please transcribe these handwritten notes from the image and give me a brief overview of what they cover.' }
+          ]
+        }];
+      } else {
+        messages = [{ role: 'user', content: `Here are my study notes:\n\n${textNotes}\n\nPlease analyze these notes and give me a brief overview of what topics they cover.` }];
+      }
+
+      try {
+        const reply = await callClaude(messages);
+        notesContext = textNotes || '[Notes from uploaded image]';
+        chatHistory = [
+          ...messages,
+          { role: 'assistant', content: reply }
+        ];
+        removeLoading();
+        addMessage('ai', '✅ ' + reply);
+        ['summaryBtn', 'quizBtn', 'flashBtn'].forEach(id => document.getElementById(id).disabled = false);
+      } catch (err) {
+        removeLoading();
+        addMessage('ai', '❌ Error connecting to AI. Please try again.');
+      }
+      document.getElementById('analyzeBtn').disabled = false;
+    }
+
+    async function quickAction(action) {
+      const prompts = {
+        summary: 'Please give me a clear, structured summary of my notes with key points organized under headings.',
+        quiz: 'Create a 5-question multiple-choice quiz based on my notes. Format each question with options A, B, C, D and mark the correct answer.',
+        flashcards: 'Create 6 flashcards from my notes. Format each as:\n**Card N:**\nFront: [term/concept]\nBack: [definition/explanation]'
+      };
+      const userMsg = prompts[action];
+      addMessage('user', userMsg);
+      chatHistory.push({ role: 'user', content: userMsg });
+      addLoading();
+
+      try {
+        const messages = [
+          { role: 'user', content: notesContext ? `My study notes context: ${notesContext}` : 'Analyze my study notes.' },
+          { role: 'assistant', content: 'I have analyzed your notes. How can I help you study?' },
+          ...chatHistory.slice(-4)
+        ];
+        const reply = await callClaude(messages);
+        chatHistory.push({ role: 'assistant', content: reply });
+        removeLoading();
+        addMessage('ai', reply);
+      } catch (err) {
+        removeLoading();
+        addMessage('ai', '❌ Error. Please try again.');
+      }
+    }
+
+    async function sendChat() {
+      const input = document.getElementById('chatInput');
+      const msg = input.value.trim();
+      if (!msg) return;
+      input.value = '';
+      document.getElementById('chatSendBtn').disabled = true;
+      addMessage('user', msg);
+      chatHistory.push({ role: 'user', content: msg });
+      addLoading();
+
+      try {
+        const contextMsg = notesContext ? `The student's study notes context: ${notesContext}\n\n` : '';
+        const messages = chatHistory.length > 1
+          ? chatHistory.slice(-8)
+          : [{ role: 'user', content: contextMsg + msg }];
+
+        const reply = await callClaude(messages);
+        chatHistory.push({ role: 'assistant', content: reply });
+        removeLoading();
+        addMessage('ai', reply);
+      } catch (err) {
+        removeLoading();
+        addMessage('ai', '❌ Could not reach AI. Please try again.');
+      }
+      document.getElementById('chatSendBtn').disabled = false;
+    }
+  </script>
+
+</body>
+</html>
